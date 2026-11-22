@@ -1,10 +1,11 @@
 # Block 69 Pilates · QMODSIM booking-resilience lab
 
-Interactive single-page simulator for the Block 69 Cafe Pilates booking system: SCENARIOS, LAB, CODEX, and an in-app Verification & Validation drawer.
+Interactive single-page simulator for the Block 69 Cafe Pilates booking system (Thu–Sat, 9:00 and 10:15 AM sessions, assigned capacity 3 or 4, ₱500 + optional ₱50 mat, gateway or GCash-proof payment): SCENARIOS, LAB, CODEX, and an in-app Verification & Validation drawer.
 
-- **Live app:** [Open the simulator](https://rhnshhscl.github.io/block69-pilates-qmodsim/)(deploy `docs/index.html`; it is fully self-contained)
+- **Live app:** https://rhnshhscl.github.io/block69-pilates-qmodsim/ (GitHub Pages serves `docs/index.html`; it is fully self-contained)
 - **AI usage log:** [AI_USAGE.md](AI_USAGE.md) · **Spec:** [SPEC.md](SPEC.md)
-- **Team:** _add roster_
+- **Team (Group 6, III-CINS, University of Makati):** De Leon, Rona · Delariman, Jemlyn Kizzeah · Escalo, Rheneshia Crystel · Soriano, James Bon
+- **Proposal:** Block 69 Pilates: A Web-Based Class Booking and Reservation Management System (November 2026)
 
 ## Run and test
 ```bash
@@ -16,12 +17,12 @@ open docs/index.html        # or serve it with any static host
 ## Proposal-to-module mapping
 | Module | Block 69 stressor | Model |
 |---|---|---|
-| Mod 1 · 3 | Sunday 8:00 PM slot-drop burst | NHPP, Gaussian intensity peak, exponential inter-arrivals |
-| Mod 6 | Bed-lock checkout saturation | M/M/c/K, c = 4 reformer beds, P_drop = P_K, lock hold latency W |
+| Mod 1 · 3 | Arrival burst when the admin opens next week's sessions | NHPP, Gaussian intensity peak, exponential inter-arrivals |
+| Mod 6 | Slot holds saturating during checkout | M/M/c/K, c = 4 client slots per session, P_drop = P_K, hold latency W |
 | Mod 5 | Reservation lifecycle | 6-state absorbing DTMC (S0 Selecting … S5 No-Show), N = (I − Q)⁻¹ |
-| Mod 7 | Scalpers vs studio controls | 2 × 2 game: Sniping / Lock & Abandon DoS vs Rate Limit + CAPTCHA / Deposit + SMS OTP; mixed Nash |
+| Mod 7 | Resellers vs studio controls | 2 × 2 game: Sniping / Lock & Abandon DoS vs Rate Limit + CAPTCHA / Deposit + SMS OTP; mixed Nash |
 | Mod 2 · 10 | Booking-code enumeration | Shannon entropy: 4-digit ≈ 13.3 bits vs 12-char alphanumeric ≈ 71.4 bits |
-| Mod 12 | Payment confirmation failure | Series RBD with redundant webhook fallbacks |
+| Mod 12 | Payment-recording failure | Series RBD: gateway route with redundant webhook fallbacks ∥ GCash proof route |
 | Mod 4 | Annual abuse loss (V&V) | FAIR Monte Carlo, 10,000 trials in a Web Worker |
 
 ## Layout
@@ -31,5 +32,5 @@ src/ui/app.js            views, canvases, scenarios, V&V drawer
 src/index.template.html  shell + design tokens (light/dark)
 src/codex.html           CODEX reference content
 tests/qmodsim.test.js    node:test invariant suite
-docs/index.html          built single-file app
+docs/index.html          built single-file app (GitHub Pages)
 ```

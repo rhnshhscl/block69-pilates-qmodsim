@@ -1,6 +1,7 @@
 /* Block 69 Pilates · QMODSIM pure math engines.
  * No DOM access. Runs in the browser, in a Web Worker, and under Node (node --test).
  * Units: time in minutes unless stated; money in Philippine pesos (₱); reliability time in hours.
+ * Domain: Block 69 Cafe mat Pilates, Thu–Sat, 9:00 & 10:15 AM sessions, assigned capacity 3 or 4 (Group 6 PBL proposal, Nov 2026).
  */
 (function (root) {
   'use strict';
@@ -41,7 +42,7 @@
   }
 
   // ───────────────────── Mod 1 & 3 · NHPP flash crowd ─────────────────────
-  // λ(t) = λ_base + A · exp(−(t − t_peak)² / (2σ²)), t in minutes relative to the 8:00 PM slot drop.
+  // λ(t) = λ_base + A · exp(−(t − t_peak)² / (2σ²)), t in minutes relative to the weekly slot release.
   function nhppRate(t, p) {
     return p.lambdaBase + p.A * Math.exp(-((t - p.tPeak) ** 2) / (2 * p.sigma * p.sigma));
   }
@@ -74,7 +75,7 @@
   }
 
   // ───────────────────── Mod 6 · M/M/c/K checkout locks ─────────────────────
-  // c = concurrent bed-lock checkouts (one per reformer bed), K = max sessions holding/awaiting a lock.
+  // c = concurrent slot holds (assigned session capacity of 3 or 4), K = max checkout sessions holding/awaiting a hold.
   function mmck(params) {
     const lambda = params.lambda, mu = params.mu;
     const c = Math.max(1, Math.round(params.c));
@@ -122,7 +123,7 @@
   }
 
   // ───────────────────── Mod 5 · 6-state absorbing DTMC ─────────────────────
-  const STATES = ['S0 Selecting', 'S1 Bed Locked', 'S2 Paid / Confirmed', 'S3 Attended', 'S4 Expired', 'S5 No-Show'];
+  const STATES = ['S0 Selecting', 'S1 Slot Held (unpaid / pending verification)', 'S2 Paid (pending / confirmed / rescheduled)', 'S3 Attended', 'S4 Expired / Rejected / Cancelled', 'S5 No-Show'];
   function normRow(row, stayIdx) {
     const others = row.reduce((s, v, i) => (i === stayIdx ? s : s + v), 0);
     if (others > 1) { for (let i = 0; i < row.length; i++) if (i !== stayIdx) row[i] /= others; row[stayIdx] = 0; }
@@ -253,35 +254,56 @@
   }
 
   // ───────────────────── Mod 12 · series-parallel RBD ─────────────────────
-  const PIPELINE = [
+  // Recursive tree: leaf {id, name, mtbf, mttr} | {type: 'series'|'parallel', items}.
+  // Payment recording has two independent routes (proposal: gateway OR GCash proof verified by an admin).
+  const PIPELINE = { type: 'series', id: 'sys', name: 'Booking pipeline', items: [
     { id: 'edge', name: 'Edge / CDN', mtbf: 8760, mttr: 0.5 },
     { id: 'app', name: 'Booking web app & API', mtbf: 2200, mttr: 1 },
-    { id: 'lock', name: 'Bed-lock service', mtbf: 3000, mttr: 0.5 },
+    { id: 'lock', name: 'Slot-hold service', mtbf: 3000, mttr: 0.5 },
     { id: 'db', name: 'Reservations database', mtbf: 5000, mttr: 2 },
-    { id: 'pay', name: 'Payment gateway', mtbf: 1500, mttr: 1 },
-    { id: 'hooks', name: 'Payment confirmation', parallel: [
-      { id: 'wh', name: 'Primary webhook', mtbf: 400, mttr: 2 },
-      { id: 'poll', name: 'Polling reconciler', mtbf: 900, mttr: 1 },
-      { id: 'queue', name: 'Durable retry queue', mtbf: 1200, mttr: 1 },
+    { id: 'payment', name: 'Payment recording', type: 'parallel', items: [
+      { id: 'online', name: 'Online gateway route', type: 'series', items: [
+        { id: 'pay', name: 'Payment gateway', mtbf: 1500, mttr: 1 },
+        { id: 'hooks', name: 'Gateway status', type: 'parallel', items: [
+          { id: 'wh', name: 'Primary webhook', mtbf: 400, mttr: 2 },
+          { id: 'poll', name: 'Polling reconciler', mtbf: 900, mttr: 1 },
+          { id: 'queue', name: 'Durable retry queue', mtbf: 1200, mttr: 1 },
+        ] },
+      ] },
+      { id: 'gcash', name: 'GCash proof route', type: 'series', items: [
+        { id: 'upload', name: 'Proof upload & storage', mtbf: 4000, mttr: 1 },
+        { id: 'verify', name: 'Admin verification', mtbf: 336, mttr: 12 },
+      ] },
     ] },
-    { id: 'notify', name: 'SMS / email confirmation', mtbf: 1800, mttr: 1 },
-  ];
+    { id: 'notify', name: 'Email notifications', mtbf: 1800, mttr: 1 },
+  ] };
   function relExp(t, mtbf) { return Math.exp(-t / mtbf); }
   function availability(mtbf, mttr) { return mtbf / (mtbf + mttr); }
   function seriesR(rs) { return rs.reduce((s, r) => s * r, 1); }
   function parallelR(rs) { return 1 - rs.reduce((s, r) => s * (1 - r), 1); }
-  function rbdEvaluate(pipeline, nFallback, t, overrides) {
-    const ov = overrides || {};
-    const blocks = pipeline.map((b) => {
-      if (b.parallel) {
-        const used = b.parallel.slice(0, nFallback).map((c) => ({ ...c, ...(ov[c.id] || {}) }));
-        const subs = used.map((c) => ({ ...c, R: relExp(t, c.mtbf), A: availability(c.mtbf, c.mttr) }));
-        return { ...b, subs, R: parallelR(subs.map((s) => s.R)), A: parallelR(subs.map((s) => s.A)) };
-      }
-      const c = { ...b, ...(ov[b.id] || {}) };
-      return { ...c, R: relExp(t, c.mtbf), A: availability(c.mtbf, c.mttr) };
-    });
-    return { blocks, R: seriesR(blocks.map((b) => b.R)), A: seriesR(blocks.map((b) => b.A)) };
+  // cfg: { nFallback: 1–3 gateway-status paths, gcash: include the GCash proof route, overrides: { id: {mtbf, mttr} } }
+  function rbdConfigure(node, cfg) {
+    if (node.items) {
+      let items = node.items;
+      if (node.id === 'hooks') items = items.slice(0, Math.max(1, Math.min(3, Math.round(cfg.nFallback || 1))));
+      if (node.id === 'payment' && !cfg.gcash) items = items.filter((i) => i.id !== 'gcash');
+      return { ...node, items: items.map((i) => rbdConfigure(i, cfg)) };
+    }
+    return { ...node, ...((cfg.overrides || {})[node.id] || {}) };
+  }
+  function rbdEval(node, t) {
+    if (node.items) {
+      const items = node.items.map((i) => rbdEval(i, t));
+      const f = node.type === 'parallel' ? parallelR : seriesR;
+      return { ...node, items, R: f(items.map((i) => i.R)), A: f(items.map((i) => i.A)) };
+    }
+    return { ...node, R: relExp(t, node.mtbf), A: availability(node.mtbf, node.mttr) };
+  }
+  function rbdEvaluate(pipeline, cfg, t) {
+    const tree = rbdEval(rbdConfigure(pipeline, cfg || {}), t);
+    const nodes = {}, leaves = [];
+    (function walk(n) { nodes[n.id] = n; if (n.items) n.items.forEach(walk); else leaves.push(n); })(tree);
+    return { tree, nodes, leaves, R: tree.R, A: tree.A };
   }
 
   // ───────────────────── Mod 4 · FAIR Monte Carlo (V&V support) ─────────────────────
@@ -359,24 +381,27 @@
     out.push({ target: 'Nash Indifference', standard: 'At (p*, q*) each player is indifferent between pure strategies', measured: msg, passed: ok });
     const h4 = entropyBits(10, 4), h12 = entropyBits(62, 12);
     out.push({ target: 'Token Entropy Reference', standard: '4-digit ≈ 13.3 bits, 12-char alphanumeric ≈ 71.4 bits', measured: `${h4.toFixed(2)} / ${h12.toFixed(2)} bits`, passed: Math.abs(h4 - 13.29) < 0.01 && Math.abs(h12 - 71.45) < 0.01 });
-    const hooks = m.rbd.blocks.find((b) => b.parallel);
-    const maxSub = Math.max(...hooks.subs.map((s) => s.R));
-    out.push({ target: 'Redundancy Dominance', standard: 'R_parallel ≥ max Rᵢ and R_sys ≤ min R_block', measured: `${hooks.R.toFixed(4)} ≥ ${maxSub.toFixed(4)}`, passed: hooks.R >= maxSub - 1e-12 && m.rbd.R <= Math.min(...m.rbd.blocks.map((b) => b.R)) + 1e-12 });
+    const par = Object.values(m.rbd.nodes).filter((n) => n.type === 'parallel');
+    const domOk = par.every((n) => n.R >= Math.max(...n.items.map((i) => i.R)) - 1e-12);
+    const top = m.rbd.tree.items; const serOk = m.rbd.R <= Math.min(...top.map((b) => b.R)) + 1e-12;
+    const pay = m.rbd.nodes.payment;
+    out.push({ target: 'Redundancy Dominance', standard: 'Every parallel group ≥ its best path; R_sys ≤ weakest series block', measured: `payment ${pay.R.toFixed(4)} ≥ ${Math.max(...pay.items.map((i) => i.R)).toFixed(4)}`, passed: domOk && serOk });
     const nh = m.nhpp; const rel = Math.abs(nh.simCount - nh.expected) / nh.expected;
     out.push({ target: 'NHPP Expected Count', standard: 'Thinning count within ±3·√Λ of Λ = ∫λ(t)dt', measured: `${nh.simCount} vs Λ = ${nh.expected.toFixed(1)}`, passed: Math.abs(nh.simCount - nh.expected) <= 3 * Math.sqrt(nh.expected), rel });
     return out;
   }
 
-  // Baseline parameters for Block 69's Sunday 8:00 PM weekly slot drop.
+  // Baseline parameters. Proposal facts: Thu–Sat, 2 sessions/day (9:00, 10:15 AM), capacity 3 or 4 (max 4), ₱500 fee + ₱50 mat.
+  // Release timing, arrival rates, hold time and probabilities are modelling assumptions (see CODEX › Proposal grounding).
   const DEFAULTS = {
-    nhpp: { lambdaBase: 0.5, A: 12, tPeak: 2, sigma: 3, T0: -10, T1: 40 }, // attempts/min, minutes
-    queue: { lambda: 6, mu: 1 / 1.5, c: 4, K: 10 }, // attempts/min, 1/(lock hold min)
+    nhpp: { lambdaBase: 0.3, A: 6, tPeak: 2, sigma: 4, T0: -10, T1: 40 }, // attempts/min, minutes after the weekly release
+    queue: { lambda: 4, mu: 1 / 2, c: 4, K: 8 }, // attempts/min, 1/(payment hold min), c = 4-client session cap
     dtmc: { pLock: 0.55, pAbandon: 0.10, pBack: 0.05, pPay: 0.60, pTimeout: 0.12, pAttend: 0.30, pCancel: 0.03, pNoShow: 0.05 },
-    game: { V: 600, h: 400, r: 0.6, cCap: 20, sOtp: 80, D: 300, goodwill: 350, price: 950, f1: 50, f2: 150 },
+    game: { V: 200, h: 250, r: 0.6, cCap: 20, sOtp: 80, D: 200, goodwill: 250, price: 500, f1: 30, f2: 100 }, // ₱ per weekly release; price = ₱500 session fee
     entropy: { rate: 10 }, // guesses per second
-    rbd: { nFallback: 1, t: 168 }, // hours (one week between drops)
-    // Loss events per year from slot-drop abuse (52 weekly drops); ₱ per event; secondary = RA 10173 notification/regulatory cost.
-    fair: { tefMin: 12, tefMode: 26, tefMax: 52, vuln: 0.4, lmMedian: 6000, lmSigma: 0.5, secProb: 0.05, secMedian: 80000, secSigma: 0.5, controlEff: 0.6, controlCost: 40000 },
+    rbd: { nFallback: 1, gcash: 1, t: 168, whMtbf: 400 }, // hours (one week between session openings); gcash 1 = route enabled
+    // Loss events per year from abuse of the 52 weekly session openings; ₱ per event; secondary = RA 10173 cost (client health disclosures are sensitive personal information).
+    fair: { tefMin: 12, tefMode: 26, tefMax: 52, vuln: 0.4, lmMedian: 4000, lmSigma: 0.5, secProb: 0.05, secMedian: 100000, secSigma: 0.5, controlEff: 0.6, controlCost: 40000 },
   };
 
   const api = {
@@ -386,7 +411,7 @@
     STATES, buildReservationChain, absorbingAnalysis, dtmcSimulate, matMul, matInv, identity,
     antiScalpPayoffs, solve2x2, attackerBestResponse,
     entropyBits, log10Keyspace, log10CrackSeconds, humanizeLog10Seconds, ALNUM, generateToken, empiricalEntropyPerChar,
-    PIPELINE, relExp, availability, seriesR, parallelR, rbdEvaluate,
+    PIPELINE, relExp, availability, seriesR, parallelR, rbdConfigure, rbdEvaluate,
     betaPertSample, lognormalSample, fairMeanSeverity, fairSimulate, rosi,
     runInvariantChecks, runModelChecks,
   };

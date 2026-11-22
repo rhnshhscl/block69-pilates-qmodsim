@@ -1,4 +1,4 @@
-"""Inline engine, UI and CODEX into one self-contained dist/index.html."""
+"""Inline engine, UI and CODEX into one self-contained docs/index.html (served by GitHub Pages)."""
 from pathlib import Path
 
 root = Path(__file__).parent

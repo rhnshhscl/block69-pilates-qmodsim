@@ -34,6 +34,18 @@
 - **Surgical refinement:** "Put the entropy row labels above the bars and flip the stats label inside the bar only when it would overflow. Add a 58 px gutter to the RBD for the endpoint labels. Tighten matrix cell padding. Hide the empirical bars until 50 tokens have been absorbed."
 - **Verification outcome:** Re-rendered with no console errors and 12/12 V&V checks passing in light and dark themes.
 
+### Refinement Iteration 04: Parameters not grounded in the proposal
+- **SE phase:** Phase 1 (requirements) revisited
+- **Flaw detected:** A review against Group 6's Chapters 1–2 found the first build had invented domain facts. It assumed reformer beds (the proposal is mat Pilates), a Sunday 8:00 PM release, a ₱950 class price (the proposal says ₱500 + ₱50 mat), SMS confirmations (the proposal uses email and in-app notifications) and guest booking lookups (the proposal requires client accounts). It also omitted the admin-review step and the health disclosures, which are sensitive personal information under RA 10173.
+- **Surgical refinement:** "Rebase DEFAULTS on proposal facts (c = 4, p_slot = ₱500, Thu–Sun 2×/day). Relabel states S1 Slot Held, S2 Paid (pending/confirmed), S4 Expired/Cancelled (incl. admin decline). Rename pipeline blocks. Add a CODEX 'Proposal grounding' table that marks every value as Proposal or Assumption. Add RA 10173 Sec. 3(l)/13 rows for health data."
+- **Verification outcome:** 18/18 unit tests pass with the new defaults. The game keeps an interior mixed equilibrium (p* ≈ 0.577, q* ≈ 0.651). V&V is 12/12, and no stale terms remain in the built page.
+
+### Refinement Iteration 05: Proposal revision changed the domain model
+- **SE phase:** Phase 1 (requirements change)
+- **Flaw detected:** The group's November proposal changed several rules the simulator depended on. Sessions now run Thu–Sat (6 per week, not 8). Clients can pay through the gateway or by uploading GCash proof that an admin verifies. Payment status is unpaid / pending verification / paid. Booking status adds rescheduled and rejected. Admins open sessions in advance and mark attendance. Notifications are email only. The simulator still showed Thu–Sun, a single payment route and in-app notifications, and allowed c up to 8.
+- **Surgical refinement:** "Turn the RBD into a recursive series-parallel tree with payment recording = [gateway → (webhook ∥ polling ∥ queue)] ∥ [proof upload → admin verification]. Add a GCash route control and a Scenario 3 fork for it. Relabel the DTMC states to the new payment and booking statuses, with admin-marked attendance for S3/S5. Limit the c slider to 3–4. Update CODEX grounding with section citations, and add RA 10173 rows for GCash screenshots."
+- **Verification outcome:** 18 unit tests pass, including new checks that R_payment = 1 − (1 − R_online)(1 − R_gcash) and that adding the GCash route raises R_sys. V&V is 12/12 with the updated redundancy-dominance check across all parallel groups.
+
 **TEAM:** add your own iterations from further development (TypeScript compiler errors, Vitest failures, security audit findings).
 
 ## 4. Code attribution matrix

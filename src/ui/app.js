@@ -153,11 +153,11 @@
   // ── Mod 1 · 3 NHPP ──
   MODULES.push({
     id: 'nhpp', code: 'Mod 1 · 3', title: 'NHPP flash-crowd arrivals',
-    blurb: 'Booking attempts around the Sunday 8:00 PM weekly slot drop. A Gaussian surge sits on top of background refreshes; arrivals are drawn by Lewis–Shedler thinning, and the inter-arrival gaps are exponential.',
+    blurb: 'Booking attempts around the weekly session opening, when the admin opens the next Thursday–Saturday sessions. A Gaussian surge sits on top of background refreshes; arrivals are drawn by Lewis–Shedler thinning, and the inter-arrival gaps are exponential.',
     controls: [
-      { id: 'lb', key: 'lambdaBase', label: 'Background refreshes before the drop', sym: 'λ_base', min: 0, max: 5, step: 0.1, unit: '/min', fmt: (v) => fmt(v, 1) },
-      { id: 'A', key: 'A', label: 'Sunday 8:00 PM surge height', sym: 'A', min: 0, max: 40, step: 0.5, unit: '/min', fmt: (v) => fmt(v, 1) },
-      { id: 'tp', key: 'tPeak', label: 'Surge peak, minutes after the drop', sym: 't_peak', min: -5, max: 15, step: 0.5, unit: 'min', fmt: (v) => fmt(v, 1) },
+      { id: 'lb', key: 'lambdaBase', label: 'Background refreshes before release', sym: 'λ_base', min: 0, max: 5, step: 0.1, unit: '/min', fmt: (v) => fmt(v, 1) },
+      { id: 'A', key: 'A', label: 'Surge height when sessions open', sym: 'A', min: 0, max: 40, step: 0.5, unit: '/min', fmt: (v) => fmt(v, 1) },
+      { id: 'tp', key: 'tPeak', label: 'Surge peak, minutes after release', sym: 't_peak', min: -5, max: 15, step: 0.5, unit: 'min', fmt: (v) => fmt(v, 1) },
       { id: 'sg', key: 'sigma', label: 'Surge spread', sym: 'σ', min: 0.5, max: 15, step: 0.5, unit: 'min', fmt: (v) => fmt(v, 1) },
     ],
     state: () => S.nhpp,
@@ -179,7 +179,7 @@
       addCanvas(c1, (ctx, w, hh, C, dt) => {
         const m = self.m; if (!m) return;
         const ymax = Math.max(m.lamMax, ...m.bins) * 1.15;
-        const g = chart(ctx, w, hh, C, { x0: p.T0, x1: p.T1, y0: 0, y1: ymax, xLabel: 'minutes after the 8:00 PM slot drop', yLabel: 'attempts / min', legend: [{ label: 'λ(t) intensity', color: C.accent }, { label: 'simulated per minute', color: C.sage, box: true }] });
+        const g = chart(ctx, w, hh, C, { x0: p.T0, x1: p.T1, y0: 0, y1: ymax, xLabel: 'minutes after the admin opens next week\'s sessions', yLabel: 'attempts / min', legend: [{ label: 'λ(t) intensity', color: C.accent }, { label: 'simulated per minute', color: C.sage, box: true }] });
         ctx.fillStyle = rgba(C.sage, 0.45);
         m.bins.forEach((b, i) => { const x0 = g.X(p.T0 + i), x1 = g.X(p.T0 + i + 1); ctx.fillRect(x0 + 1, g.Y(b), x1 - x0 - 2, g.Y(0) - g.Y(b)); });
         area(ctx, m.curve, g.X, g.Y, 0, C.accent, 0.1); line(ctx, m.curve, g.X, g.Y, C.accent, 2.2);
@@ -221,27 +221,27 @@
 
   // ── Mod 6 · M/M/c/K ──
   MODULES.push({
-    id: 'queue', code: 'Mod 6', title: 'M/M/c/K checkout-lock queue',
-    blurb: 'Each attempt that reaches checkout takes a bed lock. c locks are processed at once (one per reformer bed); up to K sessions may hold or wait for a lock. When K is full, the attempt sees "Slots busy, try again": P_drop = P_K.',
+    id: 'queue', code: 'Mod 6', title: 'M/M/c/K slot-hold queue',
+    blurb: 'Each attempt that reaches checkout holds a client slot while the client pays through the gateway. c holds run at once (one per client slot; the assigned capacity is 3 or 4) and up to K sessions may hold or wait. When K is full, the attempt sees "Slots busy, try again": P_drop = P_K.',
     controls: [
-      { id: 'ql', key: 'lambda', label: 'Booking attempts at the drop', sym: 'λ', min: 0.2, max: 30, step: 0.1, unit: '/min', fmt: (v) => fmt(v, 1) },
-      { id: 'qh', label: 'Checkout lock hold time', sym: '1/μ', min: 0.25, max: 5, step: 0.05, unit: 'min', get: (o) => 1 / o.mu, set: (o, v) => { o.mu = 1 / v; }, fmt: (v) => fmt(v, 2) },
-      { id: 'qc', key: 'c', label: 'Reformer beds checking out at once', sym: 'c', min: 1, max: 8, step: 1, fmt: (v) => String(Math.round(v)) },
+      { id: 'ql', key: 'lambda', label: 'Booking attempts at release', sym: 'λ', min: 0.2, max: 30, step: 0.1, unit: '/min', fmt: (v) => fmt(v, 1) },
+      { id: 'qh', label: 'Payment hold time per slot', sym: '1/μ', min: 0.25, max: 5, step: 0.05, unit: 'min', get: (o) => 1 / o.mu, set: (o, v) => { o.mu = 1 / v; }, fmt: (v) => fmt(v, 2) },
+      { id: 'qc', key: 'c', label: 'Assigned session capacity (3 or 4)', sym: 'c', min: 3, max: 4, step: 1, fmt: (v) => String(Math.round(v)) },
       { id: 'qk', key: 'K', label: 'Session cap: holding + waiting', sym: 'K', min: 1, max: 40, step: 1, fmt: (v) => String(Math.max(Math.round(v), Math.round(S.queue.c))) },
     ],
     state: () => S.queue,
     speed: 1,
     mount(body) {
       const self = this;
-      const c1 = h('canvas', { style: '--h:270px', 'aria-label': 'Animated reformer bed checkout locks' });
+      const c1 = h('canvas', { style: '--h:270px', 'aria-label': 'Animated slot holds during checkout' });
       const c2 = h('canvas', { style: '--h:230px', 'aria-label': 'Stationary distribution of sessions' });
       const c3 = h('canvas', { style: '--h:230px', 'aria-label': 'Drop probability against arrival rate' });
       body.append(
         kpis([
           { id: 'q-rho', label: 'Offered load ρ = λ / (c · μ)' }, { id: 'q-pk', label: 'P_drop = P_K' },
-          { id: 'q-W', label: 'Lock hold latency W (wait + hold)' }, { id: 'q-Wq', label: 'Wait for a free bed lock W_q' },
+          { id: 'q-W', label: 'Slot hold latency W (wait + hold)' }, { id: 'q-Wq', label: 'Wait for a free slot hold W_q' },
           { id: 'q-L', label: 'Sessions in system L' }, { id: 'q-le', label: 'Accepted rate λ_eff' },
-          { id: 'q-u', label: 'Bed-lock utilisation' }, { id: 'q-p0', label: 'All beds idle P₀' },
+          { id: 'q-u', label: 'Slot-hold utilisation' }, { id: 'q-p0', label: 'All slots idle P₀' },
         ]),
         h('div', { class: 'card canvas-card' }, h('header', {}, h('h3', { text: 'Live checkout floor' }),
           seg([[0.5, '×0.5'], [1, '×1'], [3, '×3']], () => self.speed, (v) => { self.speed = v; })), c1),
@@ -293,8 +293,8 @@
       // layout
       const pad = 14, laneW = Math.min(260, w * 0.32), bedsX = pad + laneW + 40, bedsW = w - bedsX - pad;
       ctx.font = `11.5px ${C.body}`; ctx.fillStyle = C.muted; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-      ctx.fillText(`Waiting for a bed lock (${sim.wait.length}/${sim.K - sim.c})`, pad, pad);
-      ctx.fillText('Reformer beds · checkout locks', bedsX, pad);
+      ctx.fillText(`Waiting for a slot hold (${sim.wait.length}/${sim.K - sim.c})`, pad, pad);
+      ctx.fillText('Session slots · payment holds', bedsX, pad);
       // waiting lane
       const slots = sim.K - sim.c, cols = Math.max(1, Math.min(10, slots)), sz = Math.min(20, (laneW - (cols - 1) * 4) / cols);
       for (let j = 0; j < slots; j++) {
@@ -309,17 +309,16 @@
       sim.beds.forEach((b, i) => {
         const x = bedsX + (i % bc) * (bw + gap), y = pad + 22 + Math.floor(i / bc) * (bh + gap);
         ctx.strokeStyle = C.line; ctx.lineWidth = 1; ctx.beginPath(); ctx.roundRect(x + 0.5, y + 0.5, bw, bh, 6); ctx.stroke();
-        // reformer frame: footbar, rails, carriage
-        ctx.fillStyle = C.sunk; ctx.fillRect(x + 8, y + bh / 2 - 2, bw - 16, 4);
-        ctx.fillStyle = C.muted; ctx.fillRect(x + bw - 16, y + 6, 4, bh - 12);
+        // exercise mat outline
+        ctx.fillStyle = C.sunk; ctx.beginPath(); ctx.roundRect(x + 6, y + 5, bw - 12, bh - 10, 4); ctx.fill();
         const fl = sim.flashes.find((f) => f.i === i);
         if (b) {
           const held = sim.t - b.start, frac = Math.min(1, held * p.mu / 2);
           ctx.fillStyle = C.accent; ctx.beginPath(); ctx.roundRect(x + 10 + frac * (bw * 0.35), y + 7, bw * 0.4, bh - 14, 4); ctx.fill();
-          label(ctx, C, `locked ${held.toFixed(2)} min`, x + 14 + frac * (bw * 0.35), y + bh / 2, 'left', C.bg);
+          label(ctx, C, `holding ${held.toFixed(2)} min`, x + 14 + frac * (bw * 0.35), y + bh / 2, 'left', C.bg);
         } else {
           ctx.strokeStyle = fl ? C.ok : C.line; ctx.setLineDash([3, 3]); ctx.strokeRect(x + 10.5, y + 7.5, bw * 0.4, bh - 14); ctx.setLineDash([]);
-          label(ctx, C, fl ? 'booked ✓' : `bed ${i + 1} free`, x + 16, y + bh / 2, 'left', fl ? C.ok : C.muted);
+          label(ctx, C, fl ? 'booked ✓' : `slot ${i + 1} free`, x + 16, y + bh / 2, 'left', fl ? C.ok : C.muted);
         }
       });
       sim.flashes = sim.flashes.filter((f) => (f.age += dt) < 0.6);
@@ -344,19 +343,19 @@
   });
 
   // ── Mod 5 · DTMC ──
-  const SHORT = ['S0 Selecting', 'S1 Bed Locked', 'S2 Paid', 'S3 Attended', 'S4 Expired', 'S5 No-Show'];
+  const SHORT = ['S0 Selecting', 'S1 Slot Held', 'S2 Paid', 'S3 Attended', 'S4 Expired / Rejected', 'S5 No-Show'];
   MODULES.push({
     id: 'dtmc', code: 'Mod 5', title: '6-state reservation DTMC',
-    blurb: 'A reservation moves Selecting → Bed Locked → Paid and is absorbed as Attended, Expired, or No-Show. The canonical form P = [Q R; 0 I] gives N = (I − Q)⁻¹, absorption B = N · R, and mean steps t = N · 1.',
+    blurb: 'A reservation moves Selecting → Slot Held (unpaid or pending GCash verification) → Paid (pending, confirmed or rescheduled) and is absorbed as Attended or No-Show (marked by the admin) or Expired / Rejected / Cancelled. The canonical form P = [Q R; 0 I] gives N = (I − Q)⁻¹, absorption B = N · R, and mean steps t = N · 1.',
     controls: [
-      { id: 'd1', key: 'pLock', label: 'Selecting → takes a bed lock', sym: 'P₀₁', min: 0, max: 0.9, step: 0.01 },
+      { id: 'd1', key: 'pLock', label: 'Selecting → holds a slot', sym: 'P₀₁', min: 0, max: 0.9, step: 0.01 },
       { id: 'd2', key: 'pAbandon', label: 'Selecting → leaves (expired)', sym: 'P₀₄', min: 0, max: 0.5, step: 0.01 },
-      { id: 'd3', key: 'pBack', label: 'Bed Locked → back to selecting', sym: 'P₁₀', min: 0, max: 0.4, step: 0.01 },
-      { id: 'd4', key: 'pPay', label: 'Bed Locked → payment confirmed', sym: 'P₁₂', min: 0, max: 0.95, step: 0.01 },
-      { id: 'd5', key: 'pTimeout', label: 'Bed Locked → lock TTL expires', sym: 'P₁₄', min: 0, max: 0.6, step: 0.01 },
-      { id: 'd6', key: 'pAttend', label: 'Paid → attends class', sym: 'P₂₃', min: 0, max: 0.95, step: 0.01 },
-      { id: 'd7', key: 'pCancel', label: 'Paid → late cancel (expired)', sym: 'P₂₄', min: 0, max: 0.3, step: 0.01 },
-      { id: 'd8', key: 'pNoShow', label: 'Paid → no-show', sym: 'P₂₅', min: 0, max: 0.4, step: 0.01 },
+      { id: 'd3', key: 'pBack', label: 'Slot Held → back to selecting', sym: 'P₁₀', min: 0, max: 0.4, step: 0.01 },
+      { id: 'd4', key: 'pPay', label: 'Slot Held → paid (gateway or verified GCash)', sym: 'P₁₂', min: 0, max: 0.95, step: 0.01 },
+      { id: 'd5', key: 'pTimeout', label: 'Slot Held → hold expires unpaid', sym: 'P₁₄', min: 0, max: 0.6, step: 0.01 },
+      { id: 'd6', key: 'pAttend', label: 'Paid → marked attended', sym: 'P₂₃', min: 0, max: 0.95, step: 0.01 },
+      { id: 'd7', key: 'pCancel', label: 'Paid → rejected or cancelled', sym: 'P₂₄', min: 0, max: 0.3, step: 0.01 },
+      { id: 'd8', key: 'pNoShow', label: 'Paid → marked no-show', sym: 'P₂₅', min: 0, max: 0.4, step: 0.01 },
     ],
     state: () => S.dtmc,
     mount(body) {
@@ -465,18 +464,18 @@
   // ── Mod 7 · Game ──
   MODULES.push({
     id: 'game', code: 'Mod 7', title: 'Anti-scalping normal-form game',
-    blurb: 'Defender picks Rate Limit + CAPTCHA or Deposit + SMS OTP; the attacker picks Sniping (resell beds) or Lock & Abandon DoS (hold beds until their TTL). Payoffs in pesos per slot drop. No pure equilibrium exists at the defaults, so both sides randomise.',
+    blurb: 'Defender picks Rate Limit + CAPTCHA or Deposit + SMS OTP; the attacker picks Sniping (book slots to resell) or Lock & Abandon DoS (hold slots until the payment hold expires). Payoffs in pesos per weekly release. No pure equilibrium exists at the defaults, so both sides randomise.',
     controls: [
-      { id: 'gV', key: 'V', label: 'Scalper resale margin per bed', sym: 'G', min: 0, max: 2000, step: 10, fmt: peso },
+      { id: 'gV', key: 'V', label: 'Scalper resale margin per slot', sym: 'G', min: 0, max: 2000, step: 10, fmt: peso },
       { id: 'gh', key: 'h', label: 'Value of a lock-hold DoS run to attacker', sym: 'H', min: 0, max: 1500, step: 10, fmt: peso },
       { id: 'gr', key: 'r', label: 'Rate limit + CAPTCHA block rate', sym: 'r', min: 0, max: 1, step: 0.01, fmt: (v) => pct(v, 0) },
       { id: 'gc', key: 'cCap', label: 'CAPTCHA-solving cost per attempt', sym: 'c_cap', min: 0, max: 200, step: 5, fmt: peso },
       { id: 'gs', key: 'sOtp', label: 'SIM / OTP farm cost per account', sym: 'c_otp', min: 0, max: 500, step: 5, fmt: peso },
       { id: 'gD', key: 'D', label: 'Deposit forfeited on abandon', sym: 'F', min: 0, max: 1500, step: 10, fmt: peso },
-      { id: 'gg', key: 'goodwill', label: 'Member goodwill lost per sniped bed', sym: 'g', min: 0, max: 1500, step: 10, fmt: peso },
-      { id: 'gp', key: 'price', label: 'Class price per reformer bed', sym: 'p_bed', min: 300, max: 2000, step: 10, fmt: peso },
-      { id: 'g1', key: 'f1', label: 'Member friction: CAPTCHA', sym: 'f₁', min: 0, max: 500, step: 5, fmt: peso },
-      { id: 'g2', key: 'f2', label: 'Member friction: deposit + OTP', sym: 'f₂', min: 0, max: 500, step: 5, fmt: peso },
+      { id: 'gg', key: 'goodwill', label: 'Client goodwill lost per sniped slot', sym: 'g', min: 0, max: 1500, step: 10, fmt: peso },
+      { id: 'gp', key: 'price', label: 'Session fee per slot', sym: 'p_slot', min: 200, max: 2000, step: 10, fmt: peso },
+      { id: 'g1', key: 'f1', label: 'Client friction: CAPTCHA', sym: 'f₁', min: 0, max: 500, step: 5, fmt: peso },
+      { id: 'g2', key: 'f2', label: 'Client friction: deposit + OTP', sym: 'f₂', min: 0, max: 500, step: 5, fmt: peso },
     ],
     state: () => S.game,
     mount(body) {
@@ -484,7 +483,7 @@
       this.tbl = h('div', {});
       const c1 = h('canvas', { style: '--h:340px', 'aria-label': 'Best-response curves and fictitious play path' });
       body.append(
-        kpis([{ id: 'g-p', label: 'p*: P(Rate Limit + CAPTCHA)' }, { id: 'g-q', label: 'q*: P(attacker snipes)' }, { id: 'g-ud', label: 'Defender value per drop' }, { id: 'g-ua', label: 'Attacker value per drop' }]),
+        kpis([{ id: 'g-p', label: 'p*: P(Rate Limit + CAPTCHA)' }, { id: 'g-q', label: 'q*: P(attacker snipes)' }, { id: 'g-ud', label: 'Defender value per release' }, { id: 'g-ua', label: 'Attacker value per release' }]),
         h('div', { class: 'card canvas-card' }, h('header', {}, h('h3', { text: 'Payoff matrix (U_defender, U_attacker)' }), h('span', { class: 'muted', style: 'font-size:12.5px', text: 'BR = best response · outlined cell = pure equilibrium' })), this.tbl),
         h('div', { class: 'card canvas-card' }, h('header', {}, h('h3', { text: 'Best responses and fictitious play' }), h('button', { class: 'btn', type: 'button', text: 'Replay learning path', onclick: () => { self.fpStep = 0; } })), c1),
       );
@@ -622,54 +621,84 @@
   });
 
   // ── Mod 12 · RBD ──
+  const rbdCfg = (p) => ({ nFallback: Math.round(p.nFallback), gcash: Math.round(p.gcash) === 1, overrides: { wh: { mtbf: p.whMtbf } } });
+  // unit layout: leaf 1×1, series = Σw × max h, parallel = (max w + bus) × (Σh + label row)
+  const BUS = 0.32, LROW = 0.34;
+  function rbdSize(n) {
+    if (!n.items) return { w: 1, h: 1 };
+    const ks = n.items.map(rbdSize);
+    return n.type === 'series' ? { w: ks.reduce((a, k) => a + k.w, 0), h: Math.max(...ks.map((k) => k.h)) }
+      : { w: Math.max(...ks.map((k) => k.w)) + BUS, h: ks.reduce((a, k) => a + k.h, 0) + LROW };
+  }
+  function rbdDraw(ctx, C, n, x, y, uw, uh) {
+    const sz = rbdSize(n), W = sz.w * uw, H = sz.h * uh, mid = y + H / 2;
+    const seg = (x1, y1, x2, y2) => { ctx.strokeStyle = C.muted; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); };
+    if (!n.items) {
+      const gx = 7, gy = 5, bx = x + gx, by = y + gy, bw = W - 2 * gx, bh = H - 2 * gy;
+      seg(x, mid, bx, mid); seg(bx + bw, mid, x + W, mid);
+      ctx.fillStyle = C.bg; ctx.fillRect(bx, by, bw, bh);
+      ctx.fillStyle = rgba(relColor(C, n.R), 0.18); ctx.fillRect(bx, by, bw, bh);
+      ctx.strokeStyle = relColor(C, n.R); ctx.lineWidth = 1.5; ctx.strokeRect(bx + 0.5, by + 0.5, bw - 1, bh - 1);
+      ctx.font = `600 11px ${C.body}`; ctx.fillStyle = C.ink; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      const words = n.name.split(' '), lines = []; let ln = '';
+      words.forEach((wd) => { const tst = ln ? ln + ' ' + wd : wd; if (ctx.measureText(tst).width > bw - 8 && ln) { lines.push(ln); ln = wd; } else ln = tst; }); lines.push(ln);
+      lines.slice(0, 2).forEach((l, i) => ctx.fillText(l, bx + bw / 2, by + 4 + i * 12));
+      label(ctx, C, `R ${n.R.toFixed(3)}`, bx + bw / 2, by + bh - 21, 'center', C.ink, 11);
+      label(ctx, C, `MTBF ${Math.round(n.mtbf)} h`, bx + bw / 2, by + bh - 9, 'center', C.muted, 10);
+      return;
+    }
+    if (n.type === 'series') {
+      let cx = x;
+      n.items.forEach((c) => { const k = rbdSize(c); rbdDraw(ctx, C, c, cx, y + (H - k.h * uh) / 2, uw, uh); cx += k.w * uw; });
+      if (cx < x + W) seg(cx, mid, x + W, mid);
+      return;
+    }
+    const bl = x + (BUS / 2) * uw * 0.5, br = x + W - (BUS / 2) * uw * 0.5, inner = (Math.max(...n.items.map((c) => rbdSize(c).w))) * uw;
+    label(ctx, C, `${n.name} · R ${n.R.toFixed(4)}`, x + W / 2, y + LROW * uh * 0.5, 'center', C.ink, 11);
+    let cy = y + LROW * uh; const mids = [];
+    n.items.forEach((c) => {
+      const k = rbdSize(c), ch = k.h * uh, cw = k.w * uw, cx0 = x + (BUS / 2) * uw;
+      rbdDraw(ctx, C, c, cx0, cy, uw, uh);
+      const m = cy + ch / 2; mids.push(m);
+      seg(bl, m, cx0, m); seg(cx0 + cw, m, br, m);
+      if (cw < inner) seg(cx0 + cw, m, cx0 + inner, m);
+      cy += ch;
+    });
+    seg(bl, Math.min(...mids), bl, Math.max(...mids)); seg(br, Math.min(...mids), br, Math.max(...mids));
+    seg(x, mid, bl, mid); seg(br, mid, x + W, mid);
+  }
   MODULES.push({
     id: 'rbd', code: 'Mod 12', title: 'Series-parallel booking pipeline (RBD)',
-    blurb: 'A booking succeeds only if every block in the series chain works. Payment confirmation is the weak link, so it gets parallel paths: primary webhook, polling reconciler, durable retry queue. Rᵢ(t) = e^(−t / MTBFᵢ).',
+    blurb: 'A booking succeeds only if every series block works. Payment recording has two independent routes from the proposal: the online gateway (with redundant status webhooks) or a GCash proof upload verified by an admin. Rᵢ(t) = e^(−t / MTBFᵢ).',
     controls: [
-      { id: 'rn', key: 'nFallback', label: 'Payment-confirmation paths in parallel', sym: 'n', min: 1, max: 3, step: 1, fmt: (v) => String(Math.round(v)) },
+      { id: 'rn', key: 'nFallback', label: 'Gateway-status paths in parallel', sym: 'n', min: 1, max: 3, step: 1, fmt: (v) => String(Math.round(v)) },
+      { id: 'rg', key: 'gcash', label: 'GCash proof-upload route', sym: 'route', min: 0, max: 1, step: 1, fmt: (v) => (Math.round(v) === 1 ? 'on' : 'off') },
       { id: 'rt', key: 't', label: 'Mission time since last deploy', sym: 't', min: 1, max: 720, step: 1, unit: 'h', fmt: (v) => String(Math.round(v)) },
       { id: 'rw', key: 'whMtbf', label: 'Primary webhook MTBF', sym: 'MTBF_wh', min: 20, max: 3000, step: 10, unit: 'h', fmt: (v) => String(Math.round(v)) },
     ],
     state: () => S.rbd,
     mount(body) {
-      const self = this; if (S.rbd.whMtbf == null) S.rbd.whMtbf = 400;
-      const c1 = h('canvas', { style: '--h:250px;min-width:720px', 'aria-label': 'Reliability block diagram' });
+      const self = this;
+      this.c1 = h('canvas', { style: '--h:330px;min-width:760px', 'aria-label': 'Reliability block diagram' });
       const c2 = h('canvas', { style: '--h:260px', 'aria-label': 'System reliability over time' });
       body.append(
-        kpis([{ id: 'r-R', label: 'R_sys(t)' }, { id: 'r-A', label: 'Inherent availability A_sys' }, { id: 'r-down', label: 'Expected downtime per year' }, { id: 'r-mttf', label: 'Mean time to first failure' }, { id: 'r-weak', label: 'Weakest block at t' }]),
-        h('div', { class: 'card canvas-card' }, h('header', {}, h('h3', { text: 'Reliability block diagram at mission time t' })), h('div', { class: 'scroll-x' }, c1)),
-        h('div', { class: 'card canvas-card' }, h('header', {}, h('h3', { text: 'R_sys(t) with 1, 2 or 3 confirmation paths' })), c2),
+        kpis([{ id: 'r-R', label: 'R_sys(t)' }, { id: 'r-A', label: 'Inherent availability A_sys' }, { id: 'r-down', label: 'Expected downtime per year' }, { id: 'r-pay', label: 'Payment recording R(t)' }, { id: 'r-mttf', label: 'Mean time to first failure' }, { id: 'r-weak', label: 'Weakest block at t' }]),
+        h('div', { class: 'card canvas-card' }, h('header', {}, h('h3', { text: 'Reliability block diagram at mission time t' })), h('div', { class: 'scroll-x' }, this.c1)),
+        h('div', { class: 'card canvas-card' }, h('header', {}, h('h3', { text: 'R_sys(t) with 1, 2 or 3 gateway-status paths' }), h('span', { class: 'muted', style: 'font-size:12.5px', id: 'r-curve-note' })), c2),
       );
-      addCanvas(c1, (ctx, w, hh, C) => {
-        const r = self.r; if (!r) return; const pad = 58, n = r.blocks.length, gap = 22, bw = (w - 2 * pad - (n - 1) * gap) / n, midY = hh / 2;
-        ctx.strokeStyle = C.muted; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(4, midY); ctx.lineTo(w - 4, midY); ctx.stroke();
-        label(ctx, C, 'member', 4, midY - 10, 'left'); label(ctx, C, 'booked', w - 4, midY - 10, 'right');
-        r.blocks.forEach((b, i) => {
-          const x = pad + i * (bw + gap);
-          const box = (bx, by, bh, item) => {
-            ctx.fillStyle = C.bg; ctx.fillRect(bx, by, bw, bh);
-            ctx.fillStyle = rgba(relColor(C, item.R), 0.18); ctx.fillRect(bx, by, bw, bh);
-            ctx.strokeStyle = relColor(C, item.R); ctx.lineWidth = 1.5; ctx.strokeRect(bx + 0.5, by + 0.5, bw - 1, bh - 1);
-            ctx.font = `600 11.5px ${C.body}`; ctx.fillStyle = C.ink; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-            const words = item.name.split(' '); let ln = '', ly = by + 6; const lines = [];
-            words.forEach((wd) => { const tst = ln ? ln + ' ' + wd : wd; if (ctx.measureText(tst).width > bw - 10 && ln) { lines.push(ln); ln = wd; } else ln = tst; }); lines.push(ln);
-            lines.slice(0, 3).forEach((l) => { ctx.fillText(l, bx + bw / 2, ly); ly += 13; });
-            label(ctx, C, `R ${item.R.toFixed(3)}`, bx + bw / 2, by + bh - 20, 'center', C.ink);
-            label(ctx, C, `MTBF ${Math.round(item.mtbf)}h`, bx + bw / 2, by + bh - 8, 'center');
-          };
-          if (b.subs) {
-            const k = b.subs.length, bh = Math.min(74, (hh - 30 - (k - 1) * 8) / k), tot = k * bh + (k - 1) * 8, y0 = midY - tot / 2;
-            ctx.strokeStyle = C.muted; ctx.beginPath(); ctx.moveTo(x - gap / 2, y0 + bh / 2); ctx.lineTo(x - gap / 2, y0 + tot - bh / 2); ctx.moveTo(x + bw + gap / 2, y0 + bh / 2); ctx.lineTo(x + bw + gap / 2, y0 + tot - bh / 2); ctx.stroke();
-            b.subs.forEach((s, j) => { const y = y0 + j * (bh + 8); ctx.beginPath(); ctx.moveTo(x - gap / 2, y + bh / 2); ctx.lineTo(x + bw + gap / 2, y + bh / 2); ctx.stroke(); box(x, y, bh, s); });
-            label(ctx, C, `parallel R ${b.R.toFixed(4)}`, x + bw / 2, y0 - 10, 'center', C.ink);
-          } else box(x, midY - 37, 74, b);
-        });
+      addCanvas(this.c1, (ctx, w, hh, C) => {
+        const r = self.r; if (!r) return; const sz = rbdSize(r.tree), pad = 40;
+        const uw = (w - 2 * pad) / sz.w, uh = (hh - 12) / sz.h;
+        label(ctx, C, 'client', 4, hh / 2 - 10, 'left'); label(ctx, C, 'booked', w - 4, hh / 2 - 10, 'right');
+        ctx.strokeStyle = C.muted; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(4, hh / 2); ctx.lineTo(pad, hh / 2); ctx.moveTo(w - pad, hh / 2); ctx.lineTo(w - 4, hh / 2); ctx.stroke();
+        rbdDraw(ctx, C, r.tree, pad, 6, uw, uh);
       });
       addCanvas(c2, (ctx, w, hh, C) => {
-        const p = S.rbd, ov = { wh: { mtbf: p.whMtbf } };
+        const p = S.rbd;
         const g = chart(ctx, w, hh, C, { x0: 0, x1: 720, y0: 0, y1: 1, xLabel: 'hours since last deploy', yFmt: (v) => v.toFixed(1), legend: [1, 2, 3].map((n) => ({ label: `${n} path${n > 1 ? 's' : ''}`, color: n === 1 ? C.bad : n === 2 ? C.warn : C.ok, dash: n === Math.round(p.nFallback) ? null : [5, 4] })) });
         [1, 2, 3].forEach((n) => {
-          const pts = []; for (let t = 0; t <= 720; t += 6) pts.push([t, QM.rbdEvaluate(QM.PIPELINE, n, t, ov).R]);
+          const cfg = { ...rbdCfg(p), nFallback: n };
+          const pts = []; for (let t = 0; t <= 720; t += 6) pts.push([t, QM.rbdEvaluate(QM.PIPELINE, cfg, t).R]);
           line(ctx, pts, g.X, g.Y, n === 1 ? C.bad : n === 2 ? C.warn : C.ok, n === Math.round(p.nFallback) ? 2.6 : 1.4, n === Math.round(p.nFallback) ? null : [5, 4]);
         });
         ctx.strokeStyle = C.ink; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(g.X(p.t), g.P.t); ctx.lineTo(g.X(p.t), g.Y(0)); ctx.stroke(); ctx.setLineDash([]);
@@ -678,14 +707,16 @@
       });
     },
     update() {
-      const p = S.rbd, n = Math.round(p.nFallback), ov = { wh: { mtbf: p.whMtbf } };
-      const r = QM.rbdEvaluate(QM.PIPELINE, n, p.t, ov); this.r = r;
-      let mttf = 0; for (let t = 0; t < 30000; t += 5) mttf += QM.rbdEvaluate(QM.PIPELINE, n, t + 2.5, ov).R * 5;
-      const items = r.blocks.flatMap((b) => (b.subs ? [{ name: b.name + ' (group)', R: b.R }] : [b]));
-      const weak = items.reduce((m, b) => (b.R < m.R ? b : m));
+      const p = S.rbd, cfg = rbdCfg(p);
+      const r = QM.rbdEvaluate(QM.PIPELINE, cfg, p.t); this.r = r;
+      const sz = rbdSize(r.tree); if (this.c1) this.c1.style.setProperty('--h', Math.round(sz.h * 80 + 14) + 'px');
+      let mttf = 0; for (let t = 0; t < 30000; t += 5) mttf += QM.rbdEvaluate(QM.PIPELINE, cfg, t + 2.5).R * 5;
+      const weak = r.leaves.reduce((m, b) => (b.R < m.R ? b : m));
       setText('r-R', fmt(r.R, 4), r.R < 0.5 ? 'alert' : r.R > 0.8 ? 'good' : '');
       setText('r-A', pct(r.A, 3)); setText('r-down', fmt((1 - r.A) * 8760, 1) + ' h');
+      setText('r-pay', fmt(r.nodes.payment.R, 4));
       setText('r-mttf', fmt(mttf, 0) + ' h'); setText('r-weak', weak.name);
+      const note = document.getElementById('r-curve-note'); if (note) note.textContent = cfg.gcash ? 'GCash proof route on' : 'GCash proof route off';
     },
   });
 
@@ -719,8 +750,8 @@ self.onmessage = function (e) {
     return { aleA: A.ale, aleB: B.ale, aleRaw: A.aleRaw, p90: A.p90, p99: A.p99, aleM: M.ale, p90M: M.p90, hi, hb, hm, ms: Math.round(performance.now() - t0), main: true };
   }
   MODULES.push({
-    id: 'fair', code: 'Mod 4', title: 'FAIR Monte Carlo: slot-drop abuse losses',
-    blurb: 'Annual loss from bot abuse across 52 weekly drops: refunds, empty-bed revenue, and (rarely) RA 10173 breach-notification and regulatory cost when member data is exposed. 10,000 trials run in a Web Worker; the control is Deposit + SMS OTP.',
+    id: 'fair', code: 'Mod 4', title: 'FAIR Monte Carlo: release-abuse losses',
+    blurb: 'Annual loss from bot abuse across 52 weekly releases: refunds, empty-slot revenue, and (rarely) RA 10173 costs when client data is exposed, including the health disclosures collected at registration. 10,000 trials run in a Web Worker; the control is Deposit + SMS OTP.',
     controls: [
       { id: 'f1', key: 'tefMin', label: 'Abuse attempts per year, minimum', sym: 'a_min', min: 0, max: 40, step: 1, fmt: (v) => String(v) },
       { id: 'f2', key: 'tefMode', label: 'Abuse attempts per year, most likely', sym: 'm', min: 1, max: 52, step: 1, fmt: (v) => String(v) },
@@ -775,7 +806,7 @@ self.onmessage = function (e) {
     m.controls.forEach((def) => ctlBox.append(slider(def, st, () => { m.update(); scheduleVV(); })));
     ctlBox.append(h('button', { class: 'btn', type: 'button', text: 'Reset to Block 69 baseline', onclick: () => {
       const k = { nhpp: 'nhpp', queue: 'queue', dtmc: 'dtmc', game: 'game', entropy: 'entropy', rbd: 'rbd', fair: 'fair' }[m.id];
-      Object.assign(S[k], JSON.parse(JSON.stringify(D[k]))); if (k === 'rbd') S.rbd.whMtbf = 400; mountModule(m); scheduleVV();
+      Object.assign(S[k], JSON.parse(JSON.stringify(D[k]))); mountModule(m); scheduleVV();
     } }));
     const inst = h('div', { class: 'stack' });
     body.append(h('div', { class: 'mod-head' }, h('div', {}, h('div', { style: 'display:flex;gap:10px;align-items:center' }, h('span', { class: 'chip', text: m.code }), h('h2', { text: m.title })), h('p', { text: m.blurb }))),
@@ -787,19 +818,19 @@ self.onmessage = function (e) {
   const clone = (o) => JSON.parse(JSON.stringify(o));
   const SCENARIOS = [
     {
-      id: 'flash', tag: 'Mod 1 · 3 + Mod 6', title: 'Sunday 8:00 PM slot drop', sub: 'Flash crowd saturates bed locks',
-      incident: 'The studio posts next week\'s reformer schedule every Sunday at 8:00 PM. Within two minutes, regulars hammer the booking page at 12 attempts per minute above the background. Four reformer beds can check out at once and the lock lasts 90 seconds, so most attempts hit "Slots busy, try again" and members message the café asking whether the site is down.',
-      base: () => ({ nhpp: clone(D.nhpp), queue: { mu: 1 / 1.5, c: 4, K: 10 } }),
+      id: 'flash', tag: 'Mod 1 · 3 + Mod 6', title: 'Weekly session opening', sub: 'Flash crowd saturates slot holds',
+      incident: 'Each week the admin opens the next Thursday–Saturday sessions: six sessions (9:00 and 10:15 AM daily), each with an assigned capacity of 3 or 4 clients, at ₱500 plus an optional ₱50 mat. Regulars refresh the moment slots open, peaking at about 6 attempts per minute above the background. Each attempt holds a slot for about 2 minutes while the client pays, so many see "Slots busy, try again" and message the café asking whether the site is down.',
+      base: () => ({ nhpp: clone(D.nhpp), queue: { mu: D.queue.mu, c: D.queue.c, K: D.queue.K } }),
       steps: [
-        { title: 'Checkout lock policy', prompt: 'How long should a member hold a bed while paying?', options: [
-          { label: 'Keep the 90 s lock', detail: 'Status quo. 1/μ = 1.5 min.', apply: (p) => p },
-          { label: '45 s lock + one 30 s extension', detail: 'Effective hold ≈ 0.9 min. Slower payers can extend once.', apply: (p) => { p.queue.mu = 1 / 0.9; } },
-          { label: 'Saved-card express checkout, 30 s', detail: 'Returning members pay with a stored gateway token. 1/μ = 0.5 min.', apply: (p) => { p.queue.mu = 1 / 0.5; } },
+        { title: 'Payment hold policy', prompt: 'How long should a client hold a slot while paying?', options: [
+          { label: 'Keep the 2-minute hold', detail: 'Status quo. 1/μ = 2 min.', apply: (p) => p },
+          { label: '1-minute hold + one 1-minute extension', detail: 'Effective hold ≈ 1.3 min. Slower payers can extend once.', apply: (p) => { p.queue.mu = 1 / 1.3; } },
+          { label: 'Express checkout with saved e-wallet, 45 s', detail: 'Returning clients pay with a stored gateway token. 1/μ = 0.75 min.', apply: (p) => { p.queue.mu = 1 / 0.75; } },
         ] },
-        { title: 'Release strategy', prompt: 'How should the week\'s beds be released?', options: [
-          { label: 'All beds at 8:00 PM sharp', detail: 'Status quo. A = 12/min, σ = 3 min.', apply: (p) => p },
-          { label: 'Add a waiting room (K = 24)', detail: 'More sessions may wait for a lock instead of being turned away.', apply: (p) => { p.queue.K = 24; } },
-          { label: 'Staggered release, 8:00–8:20 PM', detail: 'One class block every few minutes. Same total demand: A ÷ 3, σ × 3, peak at +8 min.', apply: (p) => { p.nhpp.A /= 3; p.nhpp.sigma *= 3; p.nhpp.tPeak = 8; } },
+        { title: 'Release strategy', prompt: 'How should the week\'s six sessions be opened?', options: [
+          { label: 'All six sessions at once', detail: 'Status quo. A = 6/min, σ = 4 min.', apply: (p) => p },
+          { label: 'Add a waiting room (K = 16)', detail: 'More sessions may wait for a slot hold instead of being turned away.', apply: (p) => { p.queue.K = 16; } },
+          { label: 'Staggered opening by day, over 20 min', detail: 'Thursday, Friday and Saturday open a few minutes apart. Same total demand: A ÷ 3, σ × 3, peak at +8 min.', apply: (p) => { p.nhpp.A /= 3; p.nhpp.sigma *= 3; p.nhpp.tPeak = 8; } },
         ] },
       ],
       compute(p) {
@@ -817,14 +848,14 @@ self.onmessage = function (e) {
             { label: 'Attempts turned away ("Slots busy")', v: drops, f: (v) => fmt(v, 1), better: 'lower' },
             { label: 'Share of attempts turned away', v: drops / L, f: (v) => pct(v), better: 'lower' },
             { label: 'Peak P_drop', v: peakPd, f: (v) => pct(v), better: 'lower' },
-            { label: 'Lock hold latency W at peak', v: Wpk, f: (v) => fmt(v, 2) + ' min', better: 'lower' },
-            { label: 'Bed-lock utilisation at peak', v: uPk, f: (v) => pct(v), better: 'none' },
+            { label: 'Slot hold latency W at peak', v: Wpk, f: (v) => fmt(v, 2) + ' min', better: 'lower' },
+            { label: 'Slot-hold utilisation at peak', v: uPk, f: (v) => pct(v), better: 'none' },
           ],
         };
       },
       draw(ctx, w, hh, C, b, c) {
         const ymax = Math.max(...b.lam.map((x) => x[1]), ...c.lam.map((x) => x[1])) * 1.15;
-        const g = chart(ctx, w, hh, C, { x0: D.nhpp.T0, x1: D.nhpp.T1, y0: 0, y1: ymax, xLabel: 'minutes after the 8:00 PM drop', yLabel: 'attempts / min', y2: { y0: 0, y1: 1, fmt: (v) => Math.round(v * 100) + '%', label: 'P_drop' }, legend: [{ label: 'λ(t) before', color: C.muted, dash: [4, 3] }, { label: 'λ(t) after', color: C.accent }, { label: 'P_drop before', color: C.bad, dash: [4, 3] }, { label: 'P_drop after', color: C.bad }] });
+        const g = chart(ctx, w, hh, C, { x0: D.nhpp.T0, x1: D.nhpp.T1, y0: 0, y1: ymax, xLabel: 'minutes after the admin opens next week\'s sessions', yLabel: 'attempts / min', y2: { y0: 0, y1: 1, fmt: (v) => Math.round(v * 100) + '%', label: 'P_drop' }, legend: [{ label: 'λ(t) before', color: C.muted, dash: [4, 3] }, { label: 'λ(t) after', color: C.accent }, { label: 'P_drop before', color: C.bad, dash: [4, 3] }, { label: 'P_drop after', color: C.bad }] });
         line(ctx, b.lam, g.X, g.Y, C.muted, 1.5, [4, 3]); area(ctx, c.lam, g.X, g.Y, 0, C.accent, 0.12); line(ctx, c.lam, g.X, g.Y, C.accent, 2.2);
         line(ctx, b.pd, g.X, g.Y2, C.bad, 1.5, [4, 3]); line(ctx, c.pd, g.X, g.Y2, C.bad, 2.4);
       },
@@ -832,17 +863,17 @@ self.onmessage = function (e) {
     },
     {
       id: 'scalper', tag: 'Mod 7 + Mod 5 + Mod 2 · 10', title: 'Scalper bot swarm', sub: 'Lock & Abandon DoS and sniping',
-      incident: 'A reseller group starts selling Block 69 slots in a Facebook group. Their scripts do two things: snipe beds the second they drop, and hold beds with throwaway accounts until the lock TTL expires so real members give up. Guest bookings are looked up with a 4-digit code. Expired reservations jump and no-shows climb as resold seats go unused.',
+      incident: 'With only 3–4 slots per session, the popular Saturday 9:00 AM sessions become worth reselling. A reseller in a Facebook group uses scripts that do two things: book slots the second they open, and hold slots with throwaway accounts until the payment hold expires so regular clients give up. Booking confirmations link to a 4-digit reference code. Expired reservations jump, and no-shows climb as resold slots go unused.',
       base: () => ({ game: clone(D.game), dtmc: clone(D.dtmc), defense: 'none', token: { a: 10, L: 4, rate: 10 } }),
       steps: [
-        { title: 'Anti-scalping defence', prompt: 'Which control does the booking page enforce on each drop?', options: [
+        { title: 'Anti-scalping defence', prompt: 'Which control does the booking page enforce on each release?', options: [
           { label: 'No change', detail: 'Bots split evenly between sniping and lock-holding.', apply: (p) => p },
           { label: 'Rate limit + CAPTCHA', detail: 'Blocks a share r of scripted attempts. Attackers respond by switching strategy.', apply: (p) => { p.defense = 'D1'; } },
           { label: 'Deposit + SMS OTP', detail: 'Abandoned locks forfeit the deposit; each account needs a working SIM.', apply: (p) => { p.defense = 'D2'; } },
-          { label: 'Randomise at the Nash mix p*', detail: 'Each drop picks a control at random with the equilibrium probability, so attackers cannot plan around it.', apply: (p) => { p.defense = 'mix'; } },
+          { label: 'Randomise at the Nash mix p*', detail: 'Each release picks a control at random with the equilibrium probability, so attackers cannot plan around it.', apply: (p) => { p.defense = 'mix'; } },
         ] },
-        { title: 'Guest booking reference', prompt: 'What format should the booking lookup code use?', options: [
-          { label: 'Keep the 4-digit code', detail: '≈ 13.3 bits. Lookup endpoint allows 10 guesses/s.', apply: (p) => p },
+        { title: 'Booking reference token', prompt: 'What format should the reference in confirmation emails use?', options: [
+          { label: 'Keep the 4-digit code', detail: '≈ 13.3 bits. The lookup endpoint allows 10 guesses/s.', apply: (p) => p },
           { label: '6 digits + 5 tries/min lockout', detail: '≈ 19.9 bits at R = 5/60 guesses per second.', apply: (p) => { p.token = { a: 10, L: 6, rate: 5 / 60 }; } },
           { label: '12-char alphanumeric token', detail: '≈ 71.4 bits from crypto.getRandomValues().', apply: (p) => { p.token = { a: 62, L: 12, rate: 10 }; } },
         ] },
@@ -869,8 +900,8 @@ self.onmessage = function (e) {
           kpis: [
             { label: 'Reservations that end Attended', v: a.B[0][0], f: (v) => pct(v), better: 'higher' },
             { label: 'Reservations that Expire (bot locks)', v: a.B[0][1], f: (v) => pct(v), better: 'lower' },
-            { label: 'No-Shows (resold seats)', v: a.B[0][2], f: (v) => pct(v), better: 'lower' },
-            { label: 'Studio expected loss per drop', v: -defU, f: peso, better: 'lower' },
+            { label: 'No-Shows (resold slots)', v: a.B[0][2], f: (v) => pct(v), better: 'lower' },
+            { label: 'Studio expected loss per release', v: -defU, f: peso, better: 'lower' },
             { label: 'Booking-code entropy', v: bits, f: (v) => fmt(v, 1) + ' bits', better: 'higher' },
             { label: 'Expected time to enumerate a code', v: tc, f: QM.humanizeLog10Seconds, better: 'higher' },
           ],
@@ -889,36 +920,40 @@ self.onmessage = function (e) {
       toLab(p) { Object.assign(S.game, p.game); return 'game'; },
     },
     {
-      id: 'webhook', tag: 'Mod 12 + Mod 5', title: 'Payment webhook outage', sub: 'Paid members lose their beds',
-      incident: 'During a drop the payment gateway\'s webhooks start failing. The gateway charges the member, but the booking app never hears back. The 90-second lock expires, the bed goes to someone else, and the café has to refund and apologise. The primary webhook is now failing about every 30 hours and takes 6 hours to recover.',
-      base: () => ({ n: 1, whMtbf: 30, whMttr: 6, policy: 'release', dtmc: clone(D.dtmc) }),
+      id: 'webhook', tag: 'Mod 12 + Mod 5', title: 'Payment webhook outage', sub: 'Paid clients lose their slots',
+      incident: 'Right after the admin opens next week\'s sessions, the payment gateway\'s status webhooks start failing. Clients are charged, but the booking system never records the payment as paid, so the reservation cannot reach admin approval. The 2-minute hold expires, the slot goes to someone else, and the café has to handle refunds under its own policy. The primary webhook is now failing about every 30 hours and takes 6 hours to recover.',
+      base: () => ({ n: 1, gcash: false, whMtbf: 30, whMttr: 6, policy: 'release', dtmc: clone(D.dtmc) }),
       steps: [
-        { title: 'Confirmation redundancy', prompt: 'How many independent paths confirm a payment?', options: [
+        { title: 'Gateway-status redundancy', prompt: 'How many independent paths record a gateway payment?', options: [
           { label: 'Primary webhook only', detail: 'Status quo: one path in series.', apply: (p) => p },
           { label: '+ polling reconciler', detail: 'A job asks the gateway for payment status every minute.', apply: (p) => { p.n = 2; } },
           { label: '+ polling + durable retry queue', detail: 'Webhook payloads are stored and replayed until acknowledged.', apply: (p) => { p.n = 3; } },
         ] },
-        { title: 'Lock behaviour while payment is pending', prompt: 'What happens to the bed when confirmation is late?', options: [
-          { label: 'Release at TTL anyway', detail: 'Status quo. A late confirmation lands on a bed that is already gone.', apply: (p) => p },
-          { label: 'Hold the bed while pending (max 10 min)', detail: 'The lock enters a "payment pending" hold instead of expiring.', apply: (p) => { p.policy = 'hold'; } },
+        { title: 'Fallback payment route', prompt: 'What can a client do when the gateway result never arrives?', options: [
+          { label: 'Wait for the gateway', detail: 'Status quo. The reservation stays unpaid until the status comes through.', apply: (p) => p },
+          { label: 'Switch to GCash proof upload', detail: 'The proposal\'s second payment method: the client uploads a GCash screenshot and an admin verifies it.', apply: (p) => { p.gcash = true; } },
+        ] },
+        { title: 'Slot hold while payment is pending', prompt: 'What happens to the slot while payment is unpaid or pending verification?', options: [
+          { label: 'Release at the hold timeout', detail: 'Status quo. A late payment lands on a slot that is already gone.', apply: (p) => p },
+          { label: 'Keep the slot while pending (max 10 min)', detail: 'The hold switches to "pending verification" instead of expiring.', apply: (p) => { p.policy = 'hold'; } },
         ] },
       ],
       compute(p) {
-        const ov = { wh: { mtbf: p.whMtbf, mttr: p.whMttr } };
-        const r = QM.rbdEvaluate(QM.PIPELINE, p.n, 168, ov), hooks = r.blocks.find((b) => b.parallel);
-        const d = clone(p.dtmc); const late = d.pPay * (1 - hooks.A);
-        d.pPay = d.pPay * hooks.A;
-        if (p.policy === 'release') d.pTimeout += late; // late confirmations turn into expired, paid-but-lost bookings
+        const cfg = { nFallback: p.n, gcash: p.gcash, overrides: { wh: { mtbf: p.whMtbf, mttr: p.whMttr } } };
+        const r = QM.rbdEvaluate(QM.PIPELINE, cfg, 168), payA = r.nodes.payment.A;
+        const d = clone(p.dtmc); const late = d.pPay * (1 - payA);
+        d.pPay = d.pPay * payA;
+        if (p.policy === 'release') d.pTimeout += late; // late payments become expired holds: paid-but-lost bookings
         const a = QM.absorbingAnalysis(QM.buildReservationChain(d), 3);
-        const curve = []; for (let t = 0; t <= 336; t += 4) curve.push([t, QM.rbdEvaluate(QM.PIPELINE, p.n, t, ov).R]);
+        const curve = []; for (let t = 0; t <= 336; t += 4) curve.push([t, QM.rbdEvaluate(QM.PIPELINE, cfg, t).R]);
         return {
           curve,
           kpis: [
             { label: 'R_sys over one week (168 h)', v: r.R, f: (v) => fmt(v, 4), better: 'higher' },
             { label: 'Pipeline availability A_sys', v: r.A, f: (v) => pct(v, 3), better: 'higher' },
             { label: 'Expected downtime per year', v: (1 - r.A) * 8760, f: (v) => fmt(v, 1) + ' h', better: 'lower' },
-            { label: 'Confirmation path availability', v: hooks.A, f: (v) => pct(v, 3), better: 'higher' },
-            { label: 'Paid-but-expired risk per lock', v: p.policy === 'release' ? late : 0, f: (v) => pct(v, 2), better: 'lower' },
+            { label: 'Payment-recording availability', v: payA, f: (v) => pct(v, 3), better: 'higher' },
+            { label: 'Paid-but-lost risk per slot hold', v: p.policy === 'release' ? late : 0, f: (v) => pct(v, 2), better: 'lower' },
             { label: 'Reservations that end Attended', v: a.B[0][0], f: (v) => pct(v), better: 'higher' },
           ],
         };
@@ -927,9 +962,9 @@ self.onmessage = function (e) {
         const g = chart(ctx, w, hh, C, { x0: 0, x1: 336, y0: 0, y1: 1, xLabel: 'hours since last deploy', yLabel: 'R_sys(t)', yFmt: (v) => v.toFixed(1), legend: [{ label: 'before', color: C.bad, dash: [4, 3] }, { label: 'after', color: C.ok }] });
         line(ctx, b.curve, g.X, g.Y, C.bad, 1.6, [4, 3]); area(ctx, c.curve, g.X, g.Y, 0, C.ok, 0.1); line(ctx, c.curve, g.X, g.Y, C.ok, 2.4);
         ctx.strokeStyle = C.muted; ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(g.X(168), g.P.t); ctx.lineTo(g.X(168), g.Y(0)); ctx.stroke(); ctx.setLineDash([]);
-        label(ctx, C, 'next Sunday drop (168 h)', g.X(168) + 6, g.P.t + 12, 'left');
+        label(ctx, C, 'next weekly opening (168 h)', g.X(168) + 6, g.P.t + 12, 'left');
       },
-      toLab(p) { Object.assign(S.rbd, { nFallback: p.n, whMtbf: p.whMtbf, t: 168 }); return 'rbd'; },
+      toLab(p) { Object.assign(S.rbd, { nFallback: p.n, gcash: p.gcash ? 1 : 0, whMtbf: p.whMtbf, t: 168 }); return 'rbd'; },
     },
   ];
   const scnChoice = {}; SCENARIOS.forEach((s) => { scnChoice[s.id] = s.steps.map(() => 0); });
@@ -995,7 +1030,7 @@ self.onmessage = function (e) {
       const P = QM.buildReservationChain(S.dtmc);
       let dt; try { dt = QM.absorbingAnalysis(P, 3); } catch (e) { dt = null; }
       const pay = QM.antiScalpPayoffs(S.game);
-      const rbd = QM.rbdEvaluate(QM.PIPELINE, Math.round(S.rbd.nFallback), S.rbd.t, { wh: { mtbf: S.rbd.whMtbf || 400 } });
+      const rbd = QM.rbdEvaluate(QM.PIPELINE, rbdCfg(S.rbd), S.rbd.t);
       const nh = { simCount: QM.nhppSimulate(S.nhpp, S.nhpp.T0, S.nhpp.T1, QM.mulberry32(5)).length, expected: QM.nhppExpected(S.nhpp, S.nhpp.T0, S.nhpp.T1) };
       const guide = QM.runInvariantChecks({ lambda: lam, simulatedMeanInterArrival: meanIA, meanQueueLength: q.L, lambdaEff: q.lambdaEff, meanWaitTime: q.W, transitionMatrix: P, aleSeedA: fr.aleA, aleSeedB: fr.aleB });
       let model = [];
@@ -1040,6 +1075,5 @@ self.onmessage = function (e) {
   // codex table of contents
   const toc = $('#codex-toc');
   document.querySelectorAll('.codex-sec').forEach((sec) => toc.append(h('button', { type: 'button', text: sec.dataset.toc, onclick: () => sec.scrollIntoView({ behavior: RM ? 'auto' : 'smooth', block: 'start' }) })));
-  S.rbd.whMtbf = 400;
   route(); runVV(); requestAnimationFrame(loop);
 })();

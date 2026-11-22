@@ -103,8 +103,14 @@ test('Mod 2/10: token generator is unbiased and uses the alphabet only', () => {
 test('Mod 12: series/parallel algebra and redundancy benefit', () => {
   assert.ok(Math.abs(QM.parallelR([0.9, 0.9]) - 0.99) < 1e-12);
   assert.ok(Math.abs(QM.seriesR([0.9, 0.9]) - 0.81) < 1e-12);
-  const r1 = QM.rbdEvaluate(QM.PIPELINE, 1, 168), r3 = QM.rbdEvaluate(QM.PIPELINE, 3, 168);
+  const r1 = QM.rbdEvaluate(QM.PIPELINE, { nFallback: 1 }, 168), r3 = QM.rbdEvaluate(QM.PIPELINE, { nFallback: 3 }, 168);
   assert.ok(r3.R > r1.R && r3.A > r1.A);
+  // GCash route in parallel with the gateway route can only raise reliability
+  const g = QM.rbdEvaluate(QM.PIPELINE, { nFallback: 1, gcash: true }, 168);
+  assert.ok(g.R > r1.R);
+  const pay = g.nodes.payment, on = g.nodes.online, gc = g.nodes.gcash;
+  assert.ok(Math.abs(pay.R - (1 - (1 - on.R) * (1 - gc.R))) < 1e-12);
+  assert.ok(Math.abs(on.R - g.nodes.pay.R * g.nodes.hooks.R) < 1e-12);
 });
 
 test('Mod 4: FAIR ALE converges within 1.5% across two 10,000-trial seeds', () => {
