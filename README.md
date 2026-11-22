@@ -2,15 +2,15 @@
 
 Interactive single-page simulator for the Block 69 Cafe Pilates booking system: SCENARIOS, LAB, CODEX, and an in-app Verification & Validation drawer.
 
-- **Live app:** _add your GitHub Pages / Vercel URL here_ (deploy `dist/index.html`; it is fully self-contained)
+- **Live app:** [Open the simulator](https://rhnshhscl.github.io/block69-pilates-qmodsim/)(deploy `docs/index.html`; it is fully self-contained)
 - **AI usage log:** [AI_USAGE.md](AI_USAGE.md) · **Spec:** [SPEC.md](SPEC.md)
 - **Team:** _add roster_
 
 ## Run and test
 ```bash
 node --test tests/          # 18 engine invariant tests, no dependencies
-python3 build.py            # writes dist/index.html
-open dist/index.html        # or serve it with any static host
+python3 build.py            # writes docs/index.html
+open docs/index.html        # or serve it with any static host
 ```
 
 ## Proposal-to-module mapping
@@ -31,5 +31,5 @@ src/ui/app.js            views, canvases, scenarios, V&V drawer
 src/index.template.html  shell + design tokens (light/dark)
 src/codex.html           CODEX reference content
 tests/qmodsim.test.js    node:test invariant suite
-dist/index.html          built single-file app
+docs/index.html          built single-file app
 ```
