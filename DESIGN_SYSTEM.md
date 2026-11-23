@@ -1,84 +1,99 @@
 # DESIGN_SYSTEM.md: Block 69 Pilates QMODSIM
 
-Design system for the Block 69 Pilates booking-resilience lab (SCENARIOS · LAB · CODEX). It is grounded in the client's domain: a small café that runs Pilates in the morning, so the palette is warm café amber on stone and espresso, not a generic dark-gray/purple AI dashboard.
+Design system for the Block 69 Pilates booking-resilience lab (SCENARIOS · LAB · CODEX). The look is grounded in the client's domain: a small café that runs Pilates in the morning. The palette is café amber on warm stone (light) and espresso (dark), not a generic dark-gray/purple AI dashboard.
+
+Source of truth: the `:root` token blocks in `src/index.template.html`.
 
 ## 1. Design intent
 - **Domain:** Block 69 Cafe, Comembo, Taguig. Mat Pilates, Thu–Sat, 9:00 and 10:15 AM, 3–4 clients per session.
-- **Tone:** an engineering instrument that is warm rather than clinical. Telemetry reads like a café order board and a lab readout.
-- **Anti-slop rules (Taste Skill):** no purple or neon gradients, no heavy drop shadows, no glassmorphism. Surfaces are flat, borders are 1px, and numbers are monospace.
+- **Tone:** an engineering instrument that feels warm, not clinical. Telemetry reads like a lab readout on a café order board.
+- **Anti-slop rules (Taste Skill):** no purple or neon gradients, no drop shadows, no glassmorphism. Surfaces are flat, borders are 1px, and live numbers are monospace with tabular numerals.
 
 ## 2. Color tokens
-Colors are defined as CSS custom properties on `:root` (light) and redefined for dark mode. Canvases read the same tokens on every frame.
+Defined as CSS custom properties. Light is the default; dark applies through `[data-theme="dark"]`, or automatically through `prefers-color-scheme: dark` unless the user has chosen light.
 
 | Token | Role | Light | Dark |
 |---|---|---|---|
-| `--bg` | Page background | #F6F1E9 (warm stone) | #17130F (espresso) |
-| `--surface` | Cards, panels | #FFFDF8 | #1F1A15 |
-| `--surface-2` | Tables, inset areas | #EFE8DC | #2A231C |
-| `--border` | 1px card and table borders | #D9CFBF | #3A3128 |
-| `--text` | Primary text | #2A2118 | #EFE6D8 |
-| `--text-muted` | Labels, captions, axes | #7A6C5B | #A39682 |
-| `--accent` | Primary action, selected state, "before" series | #C8651B (café amber) | #E8993E |
-| `--accent-soft` | Selected-card tint | #F6E3CF | #3A2A1A |
-| `--ok` | PASS, Attended, "after" series | #3E8E5A | #5CC083 |
-| `--bad` | Expired, No-Show, failed check | #C0452F | #E8745E |
-| `--neutral-series` | Baseline or "before" bars | #8C8173 | #8C8173 |
+| `--bg` | Page background | #f4f1ec | #12100e |
+| `--surface` | Cards, top bar, drawer | #fffdf9 | #1a1815 |
+| `--sunk` | Table headers, inset areas, equation blocks | #ece7df | #221f1b |
+| `--ink` | Primary text | #1d1a16 | #efeae3 |
+| `--muted` | Labels, captions, axes | #6a6158 | #a69d91 |
+| `--line` | 1px borders and dividers | #dbd3c7 | #35302a |
+| `--grid` | Canvas gridlines | #e9e3da | #26231f |
+| `--accent` | Selection, primary action, key series | #b05a0c | #f0a23a |
+| `--accent-ink` | Text on accent fills | #ffffff | #1b1206 |
+| `--sage` | Secondary series and accent | #47755a | #8cbc98 |
+| `--ok` | PASS, positive change | #2b7a4b | #5cc58a |
+| `--warn` | Caution | #9a6410 | #e2a748 |
+| `--bad` | Failure, loss, incident | #b3341f | #f2775f |
 
 Rules:
-- Meaning never relies on color alone. Status pills carry text (PASS, no change) and chart series have legends.
-- Text/background pairs must meet WCAG AA (4.5:1) in both themes. Check any change to a token.
-- Amber is reserved for selection, primary actions and the baseline series. Do not use it decoratively.
+- **Contrast:** `--accent` on `--surface` is about 4.8:1 in light mode, and white text on the accent button is about the same. Re-check any token change in both themes.
+- **Not color alone:** status always carries text (PASS / FAIL pills, "no change" labels, chart legends).
+- **Accent use:** amber marks selection, primary actions and key series. It is not decorative.
+- **Canvases:** the canvas redraw loops read these same tokens on every frame, so strokes and gridlines keep contrast in both themes.
 
 ## 3. Typography
-| Use | Style |
-|---|---|
-| Headings, body | Clean humanist sans-serif, 400/600 weights |
-| Telemetry, readouts, tables, equations, chips | Monospace with `font-variant-numeric: tabular-nums`, so live numbers do not jitter |
-| Module tags (e.g. "MOD 6") | Small monospace, uppercase, letter-spaced, 1px amber outline |
-| Scale | 11 / 12 / 14 / 16 / 20 / 28 px |
+| Role | Family | Notes |
+|---|---|---|
+| Display (headings, brand) | **Archivo**, condensed (`font-stretch` 62–100%, weights 500–800) | Fallback: Arial Narrow, system-ui |
+| Body | **IBM Plex Sans** 400/500/600 | 15px / 1.5 base. Fallback: system-ui, Segoe UI |
+| Telemetry | **IBM Plex Mono** 400/500/600 | `font-variant-numeric: tabular-nums` for readouts, tables, tokens, equations and chips. Fallback: ui-monospace, Menlo, Consolas |
 
-Typographic rules:
-- Math uses clean Unicode only: λ, μ, ρ, σ, Σ, ·, ±, ≤, ≥, →, superscripts (², ⁻¹) and subscripts (ₙ, ₖ). Raw LaTeX (`\lambda`, `\rightarrow`) never appears in UI text or canvas labels.
-- Money is shown as ₱ with thousands separators. Time is shown with units (min, h).
-- Use `×` and `10⁶` for large numbers, not `^` carets.
+Type scale: h2 26px, h3 17px, body 15px, labels and controls 12–13.5px, KPI values 19px mono, eyebrow labels 11.5px mono uppercase with 0.08em tracking.
+
+Typography rules:
+- Math uses clean Unicode only: λ, μ, ρ, σ, Σ, ·, ±, ≤, ≥, →, ², ⁻¹, ₙ. Raw LaTeX never appears in UI text or canvas labels.
+- Money is shown as ₱. Times carry units (min, h).
+- Large numbers use `10⁶` style notation, not `^`.
 
 ## 4. Layout and workspace topology
-The layout follows the system's operational workflow rather than identical stacked cards:
-- **Top bar:** brand, SCENARIOS / LAB / CODEX tabs, V&V check button, Light/Dark switcher. It is always visible.
-- **SCENARIOS:** a left rail of three crisis walkthroughs. Each has an incident brief, two decision forks (selectable cards), a before/after telemetry chart, an engine readout table with a Change column, and "Reset forks" and "Open these parameters in LAB" actions.
-- **LAB:** a left module rail (Mod 1·3, 6, 5, 7, 2·10, 12, 4), a parameter panel with clamped sliders, a KPI strip, and a canvas area.
-- **CODEX:** a sticky section index, derivations, parameter/unit tables, a proposal-grounding table, an RA 10173 crosswalk and the V&V standards.
-- **V&V drawer:** a right-side panel with PASS/FAIL rows and a "Re-run all checks" button.
+The layout follows each archetype's workflow instead of repeating identical stacked cards:
+- **Top bar (sticky):** brand, SCENARIOS / LAB / CODEX tab group, a V&V checks button with a live pass/fail badge, and the Light/Dark toggle.
+- **SCENARIOS:** a left list of three crisis walkthroughs, then the incident brief with a red left bar, decision forks, a before/after chart, and an engine readout table with a Change column.
+- **LAB:** a 236px module rail on the left, then a two-column workspace (300px control panel + canvas stack). Each module has a KPI strip and live canvases.
+- **CODEX:** a sticky 220px section index and reading-width sections (max 74ch) with equation blocks and reference tables.
+- **V&V drawer:** a right-side panel (max 560px) with PASS/FAIL rows and a re-run button.
+- **Max content width:** 1480px.
 
 ## 5. Components
 | Component | Spec |
 |---|---|
-| Card | `--surface`, 1px `--border`, 4–6 px radius, no shadow |
-| Fork option | Card; selected state has a 2px `--accent` outline and `--accent-soft` fill |
-| Module chip | Monospace, uppercase, 1px `--accent` outline, transparent fill |
-| Primary button | `--accent` fill, white text, flat |
-| Secondary button | 1px `--border`, `--text` |
-| Status pill | PASS = `--ok` outline; no change = neutral outline; FAIL = `--bad` outline |
-| Slider | Labeled in Block 69 terms (e.g. "Assigned session capacity", "Payment hold time per slot"), clamped to its valid range, with a live monospace value readout |
-| Table | 1px row dividers, monospace numerals, right-aligned numbers |
-| KPI tile | Small muted label above a large monospace value |
+| Card | `--surface` fill, 1px `--line`, 8px radius, no shadow |
+| Rail item (selected) | 1px `--accent` border plus a 3px inset accent bar on the left |
+| Fork option (selected) | 1px `--accent` border and inset outline, plus a "●" marker on the title. Selection never relies on color alone |
+| Module chip | Mono 11.5px, `--accent` text and 1px outline, 4px radius |
+| Pill | Mono 11.5px, fully rounded, 1px outline in `--ok` / `--bad` / `--warn` / `--muted` |
+| Primary button | `--accent` fill, `--accent-ink` text, 6px radius |
+| Secondary button | `--surface` fill, 1px `--line` |
+| Segmented control | 1px bordered group; the pressed state inverts to `--ink` fill |
+| Slider | Native range input with `accent-color: var(--accent)`. The label states a Block 69 meaning, a mono symbol (λ, μ, c, K) and a live mono value readout |
+| KPI tile | Muted 12px label above a 19px mono value. Value turns `--bad` for alert, `--ok` for good |
+| Matrix table | Mono 12px, 1px grid, sunk header, muted near-zero cells, accent for the highest cell |
+| Payoff table | Nash equilibrium cell gets a 2px inset accent outline |
+| Comparison table | Left-aligned labels, right-aligned mono numbers, 1px row dividers |
 
-Domain parameter labels use proposal language instead of textbook labels, for example "Booking attempts at release (λ)" and "Assigned session capacity (c) = 3 or 4".
+Slider labels use proposal language, for example "Booking attempts at release", "Payment hold time per slot" and "Assigned session capacity (3 or 4)", not textbook terms like "Arrival Rate".
 
 ## 6. Canvas and visualization rules
-- Canvas redraw loops read the active theme tokens on every frame, so axes, gridlines and strokes keep contrast in light and dark.
-- Domain-specific canvases:
-  - Slot-hold checkout floor: 3–4 mat lanes with hold timers and a waiting queue.
-  - Animated six-state reservation chain with moving tokens.
-  - Series-parallel payment pipeline (RBD).
-- Series colors: before = `--neutral-series` or `--accent`, after = `--ok`, and failure/expiry = `--bad`. Every chart has a legend.
-- Target 60 FPS. Avoid per-frame array allocation.
+- Canvases redraw every frame and read the active theme tokens, so axes, gridlines and strokes keep contrast in light and dark.
+- Canvas height is set per card (`--h`, default 260px) and scales to the card width.
+- Domain visuals:
+  - **Live checkout floor:** 4 session slot lanes with hold timers and a waiting queue.
+  - **Reservation chain:** animated six-state absorbing chain with moving tokens.
+  - **Payment pipeline:** series-parallel reliability diagram.
+  - **Before/after telemetry:** for each scenario fork.
+- Every chart has a legend or direct labels. Series colors: baseline or "before" in neutral or amber, "after" in sage or `--ok`, failures in `--bad`.
 
-## 7. Accessibility and security hygiene
-- Every interactive control is keyboard-focusable with a visible focus ring (2px `--accent`).
-- Sliders clamp numeric input (`clamp()` in the engine) so invalid values cannot reach the engines.
-- UI text is inserted with `textContent` where possible. Avoid `innerHTML` with dynamic data.
-- Security tokens use `crypto.getRandomValues`, never `Math.random()`.
+## 7. Responsive, accessibility and motion
+- **Breakpoints:** at 1100px the two-column LAB workspace and two-up chart rows collapse to one column. At 860px the side rails become static, and the CODEX index hides.
+- **Keyboard:** all controls are focusable, with a 2px `--accent` focus ring (`:focus-visible`). Tabs use `role="tablist"` / `role="tab"` / `role="tabpanel"`, and the V&V drawer uses `aria-hidden` and `aria-controls`.
+- **Motion:** the drawer slide is disabled under `prefers-reduced-motion: reduce`.
+- **Input hygiene:** slider values are clamped in the engine (`clamp()`) so invalid input cannot reach the math.
+- **Security tokens:** generated with `crypto.getRandomValues`, never `Math.random()`.
+- **TEAM:** state here whether UI text is inserted with `textContent` or `innerHTML`, once you have checked `src/ui/app.js`.
 
 ## 8. Tools used
-Taste Skill and UI/UX Pro Max for the palette and anti-slop rules; Hallmark for tokens. **TEAM:** confirm which skills you loaded and record their OWASP vetting in `AI_USAGE.md`.
+- Palette, typography and anti-slop aesthetic: **TEAM:** list the design skills you actually loaded (e.g. Taste Skill, UI/UX Pro Max, Hallmark) and cross-reference their OWASP vetting in `AI_USAGE.md`.
+- Fonts are loaded from Google Fonts with local fallbacks.
