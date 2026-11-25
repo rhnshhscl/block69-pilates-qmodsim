@@ -1,36 +1,21 @@
-# Block 69 Pilates · QMODSIM booking-resilience lab
+# Block 69 Pilates · QMODSIM
 
-Interactive single-page simulator for the Block 69 Cafe Pilates booking system (Thu–Sat, 9:00 and 10:15 AM sessions, assigned capacity 3 or 4, ₱500 + optional ₱50 mat, gateway or GCash-proof payment): SCENARIOS, LAB, CODEX, and an in-app Verification & Validation drawer.
+An interactive defense artifact by Group 6, III-CINS, University of Makati.
 
-- **Live app:** https://rhnshhscl.github.io/block69-pilates-qmodsim/ (GitHub Pages serves `docs/index.html`; it is fully self-contained)
-- **AI usage log:** [AI_USAGE.md](AI_USAGE.md) · **Spec:** [SPEC.md](SPEC.md)
-- **Team (Group 6, III-CINS, University of Makati):** De Leon, Rona · Delariman, Jemlyn Kizzeah · Escalo, Rheneshia Crystel · Soriano, James Bon
-- **Proposal:** Block 69 Pilates: A Web-Based Class Booking and Reservation Management System (November 2026)
+**Roster:** Rona De Leon, Jemlyn Kizzeah Delariman, Rheneshia Crystel Escalo, James Bon Soriano
 
-## Run and test
-```bash
-node --test tests/          # 18 engine invariant tests, no dependencies
-python3 build.py            # writes docs/index.html
-open docs/index.html        # or serve it with any static host
-```
+| Proposal workflow | QMODSIM model |
+| --- | --- |
+| Rush for limited mats | Poisson arrivals and finite M/M/c/K checkout |
+| Payment and hold expiry | Discrete-event replay and absorbing Markov lifecycle |
+| PayMongo interruption and manual review | Changed checkout rates and a compound annual loss model |
+| Administrator cancellation and client transfers | Scenario replay initialized with transferred confirmations |
+| Account, receipt, and health data | RA 10173 crosswalk in Codex |
 
-## Proposal-to-module mapping
-| Module | Block 69 stressor | Model |
-|---|---|---|
-| Mod 1 · 3 | Arrival burst when the admin opens next week's sessions | NHPP, Gaussian intensity peak, exponential inter-arrivals |
-| Mod 6 | Slot holds saturating during checkout | M/M/c/K, c = 4 client slots per session, P_drop = P_K, hold latency W |
-| Mod 5 | Reservation lifecycle | 6-state absorbing DTMC (S0 Selecting … S5 No-Show), N = (I − Q)⁻¹ |
-| Mod 7 | Resellers vs studio controls | 2 × 2 game: Sniping / Lock & Abandon DoS vs Rate Limit + CAPTCHA / Deposit + SMS OTP; mixed Nash |
-| Mod 2 · 10 | Booking-code enumeration | Shannon entropy: 4-digit ≈ 13.3 bits vs 12-char alphanumeric ≈ 71.4 bits |
-| Mod 12 | Payment-recording failure | Series RBD: gateway route with redundant webhook fallbacks ∥ GCash proof route |
-| Mod 4 | Annual abuse loss (V&V) | FAIR Monte Carlo, 10,000 trials in a Web Worker |
+Serve the static site with `python3 -m http.server 8000 --directory dist` and visit http://localhost:8000. Run `node verify.mjs` for model checks. No build or package installation is required. See [SPEC.md](SPEC.md), [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md), and [AI_USAGE.md](AI_USAGE.md).
 
-## Layout
-```
-src/engines/qmodsim.js   pure math engines (browser, worker, Node)
-src/ui/app.js            views, canvases, scenarios, V&V drawer
-src/index.template.html  shell + design tokens (light/dark)
-src/codex.html           CODEX reference content
-tests/qmodsim.test.js    node:test invariant suite
-docs/index.html          built single-file app (GitHub Pages)
-```
+Assumptions are synthetic. Checkout timing and annual losses are illustrative. The site is a simulation of proposal operations.
+
+Hosted application: https://block69-qmodsim-group6-umak.miniaturebolt5.chatgpt.site
+
+Browser QA covered choosing the Saturday rush mitigation, adjusting capacity, playing the booking replay, switching theme, running the reduced-frequency annual loss simulation, opening verification, and reaching the Codex privacy table. Terminal checks cover 162 parameter combinations and all three scenario comparisons.
